@@ -1,5 +1,5 @@
 import express from "express";
-import dbConnection  from "./database/dbConnection.js";
+import dbConnection from "./database/dbConnection.js";
 import jobRouter from "./routes/jobRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import applicationRouter from "./routes/applicationRoutes.js";
@@ -14,7 +14,13 @@ config({ path: "./config/config.env" });
 
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL],
+    origin: [
+      process.env.FRONTEND_URL,
+      "http://localhost:8081",
+      "http://127.0.0.1:8081",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173"
+    ],
     method: ["GET", "POST", "DELETE", "PUT"],
     credentials: true,
   })
