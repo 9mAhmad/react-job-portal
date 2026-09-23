@@ -1,0 +1,146 @@
+pipeline {
+    agent any
+
+    environment {
+        PROJECT_NAME = "react-job-portal-be"
+        PORT = "4000"
+        HOST_PORT = "8083"
+        NETWORK_NAME = "react-job-portal-network"
+    }
+
+    stages {
+
+        stage('Clone Repository') {
+            steps {
+                echo "Cloning React Job Portal..."
+
+                git branch: 'main',
+                    url: 'https://github.com/Rashedul023/react-job-portal'
+
+                sh '''
+                    echo "========== PROJECT =========="
+                    ls -lah
+
+                    echo "========== BACKEND =========="
+                    ls -lah backend
+                '''
+            }
+        }
+
+        stage('Check Docker') {
+            steps {
+                echo "Checking Docker and Docker Compose..."
+
+                sh '''
+                    docker --version
+                    docker compose version
+                '''
+            }
+        }
+
+        stage('Check Docker Network') {
+            steps {
+                echo "Checking Docker network..."
+
+                sh '''
+                    if ! docker network inspect ${NETWORK_NAME} >/dev/null 2>&1; then
+                        echo "Network does not exist. Creating it..."
+                        docker network create ${NETWORK_NAME}
+                    else
+                        echo "Network already exists."
+                    fi
+
+                    docker network inspect ${NETWORK_NAME}
+                '''
+            }
+        }
+
+        stage('Check Backend Configuration') {
+            steps {
+                dir('backend') {
+                    sh '''
+                        echo "========== Dockerfile =========="
+                        cat Dockerfile
+
+                        echo ""
+                        echo "========== docker-compose.yaml =========="
+                        cat docker-compose.yaml
+                    '''
+                }
+            }
+        }
+
+        stage('Stop Previous Backend') {
+            steps {
+                echo "Stopping previous backend container..."
+
+                dir('backend') {
+                    sh '''
+                        docker compose down || true
+                    '''
+                }
+            }
+        }
+
+        stage('Build Backend') {
+            steps {
+                echo "Building backend image..."
+
+                dir('backend') {
+                    sh '''
+                        docker compose build backend
+                    '''
+                }
+            }
+        }
+
+        stage('Run Backend') {
+            steps {
+                echo "Starting backend..."
+
+                dir('backend') {
+                    sh '''
+                        docker compose up -d backend
+                    '''
+                }
+
+                sleep(time: 10, unit: 'SECONDS')
+            }
+        }
+
+        stage('Check Backend') {
+            steps {
+                echo "Checking backend container..."
+
+                dir('backend') {
+                    sh '''
+                        echo "========== CONTAINERS =========="
+
+                        docker compose ps
+
+                        echo ""
+                        echo "========== LOGS =========="
+
+                        docker compose logs backend
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo "======================================"
+            echo "Backend deployment successful!"
+            echo "Backend URL: http://localhost:${env.HOST_PORT}"
+            echo "======================================"
+        }
+
+        failure {
+            echo "======================================"
+            echo "Backend deployment failed!"
+            echo "======================================"
+        }
+    }
+}
